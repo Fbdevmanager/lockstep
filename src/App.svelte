@@ -8,13 +8,23 @@
     type HitLabel,
   } from './lib/gradeHit'
   import { loadBestScore, saveBestScoreIfHigher } from './lib/scores'
+  import { attachStarfield } from './lib/starfield'
+
+  function starfield(node: HTMLCanvasElement) {
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return { destroy: () => {} }
+    }
+    return { destroy: attachStarfield(node, { starCount: 110, speed: 0.52 }) }
+  }
 
   type Screen = 'title' | 'play' | 'over'
+
+  const MAX_LIVES = 4
 
   let screen = $state<Screen>('title')
   let score = $state(0)
   let best = $state(0)
-  let lives = $state(3)
+  let lives = $state(MAX_LIVES)
   let combo = $state(1)
 
   let pulseStart = $state<number | null>(null)
@@ -108,13 +118,25 @@
     best = loadBestScore()
     screen = 'play'
     score = 0
-    lives = 3
+    lives = MAX_LIVES
     combo = 1
     feedback = null
+    shakeActive = false
+    phase = 0
     beginCycle()
   }
 
+  /** New run from scratch (same as a full in-app refresh, no browser reload). */
+  function restartRun() {
+    startRun()
+  }
+
   function onKeydown(e: KeyboardEvent) {
+    if (e.code === 'KeyR') {
+      e.preventDefault()
+      restartRun()
+      return
+    }
     if (e.code === 'Space' || e.key === ' ') {
       e.preventDefault()
       if (screen === 'title' || screen === 'over') startRun()
@@ -139,7 +161,7 @@
       : 1.58,
   )
 
-  const nearLock = $derived(phase >= 0.88 && phase <= 1.05 && screen === 'play')
+  const nearLock = $derived(phase >= 0.8 && phase <= 1.12 && screen === 'play')
 </script>
 
 <svelte:window onkeydown={onKeydown} />
@@ -148,11 +170,19 @@
   <div class="halo" aria-hidden="true"></div>
 
   <header class="top">
-    <h1>Lockstep</h1>
+    <div class="top-row">
+      <h1>Lockstep</h1>
+      {#if screen === 'play' || screen === 'over'}
+        <button type="button" class="btn-restart" onclick={restartRun} aria-label="Restart run">
+          Restart
+        </button>
+      {/if}
+    </div>
     <p class="tagline">Press Space when the rings meet.</p>
   </header>
 
   <section class="stage" aria-live="polite">
+    <canvas class="starfield-canvas" use:starfield aria-hidden="true"></canvas>
     <button
       type="button"
       class="ring-button"
@@ -185,7 +215,7 @@
     <div class="stat lives" aria-label="lives remaining">
       <span class="k">Lives</span>
       <span class="v hearts" role="img" aria-hidden="true">
-        {#each Array(3) as _, i}
+        {#each Array(MAX_LIVES) as _, i}
           <span class:off={i >= lives}>♥</span>
         {/each}
       </span>
@@ -195,15 +225,15 @@
   {#if screen === 'title'}
     <div class="overlay">
       <p class="lead">A timing pulse. No reflex spam—just one clean beat.</p>
-      <p class="hint">Space / tap to start</p>
+      <p class="hint">Space / tap to start · <kbd>R</kbd> anytime for a fresh run</p>
     </div>
   {:else if screen === 'over'}
     <div class="overlay">
       <p class="lead gameover">Run over</p>
       <p class="scoreline">Score <strong>{score}</strong> · Best <strong>{best}</strong></p>
-      <p class="hint">Space / tap to go again</p>
+      <p class="hint">Space / tap to go again · <kbd>R</kbd> for a fresh run</p>
     </div>
   {:else}
-    <p class="footer-hint">Space or tap the ring</p>
+    <p class="footer-hint">Space or tap the ring · <kbd>R</kbd> or Restart for a new run</p>
   {/if}
 </main>

@@ -7,11 +7,14 @@ export type GradeResult = {
   livesDelta: number
 }
 
-const PULSE_MS = 2000
-const PERFECT_MS = 55
-const GOOD_MS = 130
-const OK_MS = 220
-const GRACE_AFTER_MS = 280
+/** Slower pulse = easier to read the beat. */
+const PULSE_MS = 2800
+/** How far off the ideal lock (ms) still counts — widened so the game feels fair on a laptop. */
+const PERFECT_MS = 95
+const GOOD_MS = 220
+const OK_MS = 420
+/** Extra time after the rings align before a timeout miss. */
+const GRACE_AFTER_MS = 520
 
 export { PULSE_MS, GRACE_AFTER_MS }
 
