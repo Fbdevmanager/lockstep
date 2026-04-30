@@ -42,15 +42,29 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  --heat: 0;
+  --ring-bloom: 32px;
+  --ring-hue: 0deg;
 }
 
 .halo {
   position: absolute;
   inset: -20% -30% auto;
   height: 55%;
-  background: radial-gradient(ellipse at center, rgba(60, 240, 255, 0.12), transparent 65%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(60, 240, 255, calc(0.1 + var(--heat) * 0.18)),
+    rgba(255, 60, 172, calc(0.04 + var(--heat) * 0.12)),
+    transparent 68%
+  );
   pointer-events: none;
   z-index: 0;
+  transition: background 0.35s ease;
+}
+
+.shell[data-heat='high'] .halo {
+  height: 62%;
+  opacity: 1;
 }
 
 .top {
@@ -142,6 +156,11 @@ kbd {
   align-items: center;
   justify-content: center;
   z-index: 1;
+  transition: filter 0.4s ease;
+}
+
+.stage.stage-hot {
+  filter: drop-shadow(0 0 calc(6px + var(--heat) * 14px) rgba(255, 60, 172, 0.22));
 }
 
 .starfield-canvas {
@@ -151,7 +170,8 @@ kbd {
   height: 100%;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.92;
+  opacity: calc(0.86 + var(--heat) * 0.12);
+  transition: opacity 0.35s ease;
 }
 
 .ring-button {
@@ -174,29 +194,50 @@ kbd {
   width: min(280px, 72vw);
   aspect-ratio: 1;
   border-radius: 50%;
-  border: 3px solid color-mix(in srgb, var(--cyan) 75%, transparent);
+  border: 3px solid color-mix(in srgb, var(--cyan) calc(68% + var(--heat) * 22%), transparent);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.06) inset,
-    0 0 40px rgba(60, 240, 255, 0.15);
+    0 0 calc(28px + var(--heat) * 36px) rgba(60, 240, 255, calc(0.12 + var(--heat) * 0.22));
   display: flex;
   align-items: center;
   justify-content: center;
+  filter: hue-rotate(var(--ring-hue));
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    filter 0.3s ease;
 }
 
 .ring-inner {
   width: 86%;
   height: 86%;
   border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--magenta) 85%, white);
+  border: 2px solid color-mix(in srgb, var(--magenta) calc(78% + var(--heat) * 14%), white);
   transform-origin: center;
   will-change: transform;
-  transition: box-shadow 0.12s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.15s ease;
 }
 
 .ring-inner.glow {
   box-shadow:
-    0 0 24px var(--glow),
-    0 0 48px rgba(255, 60, 172, 0.25);
+    0 0 calc(16px + var(--heat) * 28px) var(--glow),
+    0 0 var(--ring-bloom) rgba(255, 60, 172, calc(0.22 + var(--heat) * 0.28)),
+    0 0 calc(4px + var(--heat) * 20px) rgba(255, 255, 255, 0.1);
+}
+
+.ring-button.ring-urgent .ring-outer {
+  animation: ring-urgent 0.55s ease-in-out infinite alternate;
+}
+
+@keyframes ring-urgent {
+  from {
+    filter: hue-rotate(var(--ring-hue)) brightness(1);
+  }
+  to {
+    filter: hue-rotate(var(--ring-hue)) brightness(1.14) saturate(1.12);
+  }
 }
 
 .toast {
@@ -280,6 +321,22 @@ kbd {
   font-size: 1.15rem;
 }
 
+.stat-pulse .v {
+  display: inline-block;
+  animation: hud-pulse 0.9s ease-in-out infinite;
+  color: color-mix(in srgb, var(--cyan) 55%, #fff);
+}
+
+@keyframes hud-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
 .hearts span {
   margin-right: 4px;
   color: var(--magenta);
@@ -360,6 +417,12 @@ kbd {
     animation: none;
   }
   .shell.shake {
+    animation: none;
+  }
+  .ring-button.ring-urgent .ring-outer {
+    animation: none;
+  }
+  .stat-pulse .v {
     animation: none;
   }
 }

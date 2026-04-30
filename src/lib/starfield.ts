@@ -114,6 +114,7 @@ export function drawStars(
   stars: Star[],
   cx: number,
   cy: number,
+  stress: number,
 ): void {
   const maxDiag = Math.hypot(Math.max(cx, w - cx), Math.max(cy, h - cy)) + 0.001
   ctx.save()
@@ -121,10 +122,12 @@ export function drawStars(
   for (const s of stars) {
     const dist = Math.hypot(s.x - cx, s.y - cy)
     const closeness = 1 - Math.min(1, dist / maxDiag)
-    const px = 1 + Math.floor(closeness * 3)
-    const a = 0.2 + 0.75 * closeness
+    const px = 1 + Math.floor(closeness * (3 + stress * 1.2))
+    const a = 0.18 + (0.55 + stress * 0.38) * closeness
     ctx.globalAlpha = Math.min(1, a)
-    ctx.fillStyle = COLORS[s.kind]
+    const shift = Math.floor(stress * 2) % 3
+    const kind = ((s.kind + shift) % 3) as 0 | 1 | 2
+    ctx.fillStyle = COLORS[kind]
     ctx.fillRect(Math.floor(s.x), Math.floor(s.y), px, px)
   }
   ctx.restore()
@@ -132,12 +135,13 @@ export function drawStars(
 
 export function attachStarfield(
   canvas: HTMLCanvasElement,
-  opts?: { starCount?: number; speed?: number },
+  opts?: { starCount?: number; speed?: number; getStress?: () => number },
 ): () => void {
   const starCount = opts?.starCount ?? 100
   const speedMul = opts?.speed ?? 0.52
+  const getStress = opts?.getStress ?? (() => 0.25)
   /** Base drift speed in canvas pixels per second (buffer = CSS × DPR). */
-  const speedPxPerSec = 95 + 220 * speedMul
+  const speedBase = 95 + 220 * speedMul
 
   let stars: Star[] = []
   let lastW = 0
@@ -177,11 +181,13 @@ export function attachStarfield(
       lastH = h
     }
 
+    const stress = Math.max(0, Math.min(1, getStress()))
+    const speedPxPerSec = speedBase * (0.48 + stress * 2.35)
     stepStars(stars, w, h, cx, cy, dt, speedPxPerSec)
 
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, w, h)
-    drawStars(ctx, w, h, stars, cx, cy)
+    drawStars(ctx, w, h, stars, cx, cy, stress)
 
     raf = requestAnimationFrame(loop)
   }

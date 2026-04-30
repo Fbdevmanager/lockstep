@@ -7,29 +7,49 @@ export type GradeResult = {
   livesDelta: number
 }
 
-/** Slower pulse = easier to read the beat. */
-const PULSE_MS = 2800
-/** How far off the ideal lock (ms) still counts — widened so the game feels fair on a laptop. */
-const PERFECT_MS = 95
-const GOOD_MS = 220
-const OK_MS = 420
-/** Extra time after the rings align before a timeout miss. */
-const GRACE_AFTER_MS = 520
+/** 0 = chill run start, 1 = max difficulty (combo + score). */
+export function computeStress(combo: number, score: number): number {
+  return Math.min(1, combo * 0.078 + score * 0.00058)
+}
 
-export { PULSE_MS, GRACE_AFTER_MS }
+export type CycleWindows = {
+  pulseMs: number
+  graceMs: number
+  perfectMs: number
+  goodMs: number
+  okMs: number
+}
+
+/** Timing for this pulse only — call at `beginCycle` from current combo/score. */
+export function cycleWindows(combo: number, score: number): CycleWindows {
+  const s = computeStress(combo, score)
+  return {
+    pulseMs: Math.round(2800 - s * 900),
+    graceMs: Math.round(510 - s * 170),
+    perfectMs: Math.round(92 - s * 40),
+    goodMs: Math.round(205 - s * 58),
+    okMs: Math.round(365 - s * 105),
+  }
+}
+
+/** Extra score for chaining perfects (first perfect adds 0). */
+export function perfectChainBonus(chainLength: number): number {
+  if (chainLength <= 1) return 0
+  return Math.min(280, (chainLength - 1) * 22)
+}
 
 /** Signed ms: negative = early, positive = late vs ideal lock moment. */
-export function gradeDelta(deltaMs: number, combo: number): GradeResult {
+export function gradeDelta(deltaMs: number, combo: number, w: CycleWindows): GradeResult {
   const c = Math.min(10, Math.max(1, combo))
   const ad = Math.abs(deltaMs)
 
-  if (ad <= PERFECT_MS) {
+  if (ad <= w.perfectMs) {
     return { label: 'perfect', points: 100 * c, comboAfter: Math.min(10, c + 1), livesDelta: 0 }
   }
-  if (ad <= GOOD_MS) {
+  if (ad <= w.goodMs) {
     return { label: 'good', points: 45 * c, comboAfter: Math.min(10, c + 1), livesDelta: 0 }
   }
-  if (ad <= OK_MS) {
+  if (ad <= w.okMs) {
     return { label: 'ok', points: 20, comboAfter: 1, livesDelta: 0 }
   }
   return { label: 'miss', points: 0, comboAfter: 1, livesDelta: -1 }
